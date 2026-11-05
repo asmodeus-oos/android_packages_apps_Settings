@@ -1244,9 +1244,25 @@ public class ModelPageController extends BasePreferenceController {
                 loadGithubAvatar(layoutPref, data.github);
             }
         } else {
-            if (badgeView != null) badgeView.setVisibility(View.GONE);
+            final String overlayGithub = UrlUtils.trimToEmpty(
+                    mContext.getString(R.string.build_maintainer_github));
+            String overlayUrl = UrlUtils.trimToEmpty(
+                    mContext.getString(R.string.build_maintainer_url));
+            if (overlayUrl.isEmpty() && !overlayGithub.isEmpty()) {
+                overlayUrl = UrlUtils.buildGithubUrl(overlayGithub);
+            }
+            final String cardUrl = UrlUtils.sanitizeUrl(overlayUrl);
             final String donateUrl = UrlUtils.sanitizeUrl(overlayDonateUrl);
-            setupMaintainerActions(card, support, null, donateUrl);
+
+            if (badgeView != null) {
+                badgeView.setVisibility(!overlayGithub.isEmpty() ? View.VISIBLE : View.GONE);
+            }
+
+            setupMaintainerActions(card, support, cardUrl, donateUrl);
+
+            if (avatarView != null && !overlayGithub.isEmpty()) {
+                loadGithubAvatar(layoutPref, overlayGithub);
+            }
         }
 
         card.setVisibility(View.VISIBLE);
@@ -1256,7 +1272,12 @@ public class ModelPageController extends BasePreferenceController {
     private void loadGithubAvatar(LayoutPreference layoutPref, String username) {
         ImageView av = layoutPref.findViewById(R.id.maintainer_avatar);
         if (av == null) return;
-        GithubAvatarLoader.getInstance().loadIntoImageView(mContext, av, username);
+        String cleanUser = UrlUtils.trimToEmpty(username)
+                .replace("https://github.com/", "")
+                .replace("http://github.com/", "")
+                .replaceAll("/+$", "");
+        if (cleanUser.isEmpty()) return;
+        GithubAvatarLoader.getInstance().loadIntoImageView(mContext, av, cleanUser);
     }
 
     /**
